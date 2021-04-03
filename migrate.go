@@ -18,7 +18,8 @@ type runner struct {
 
 //New return an migraty runner instance
 func New(db *sql.DB, migrationsPath string) Runner {
-	return runner{db: db, migrationsPath: migrationsPath + "/"}
+	migrationsPath = normalizeMigrationPath(migrationsPath)
+	return runner{db: db, migrationsPath: migrationsPath}
 }
 
 func (r runner) Migrate() {
@@ -34,6 +35,26 @@ func (r runner) Migrate() {
 		}
 	}
 	logInfo("Migraty: finished migrations")
+}
+
+//tableExists check if the given table is present on the database
+func (r runner) tableExists(dbname, table string) bool {
+	result, err := r.db.Query("SELECT * FROM information_schema.tables WHERE table_schema = ? AND table_name = ? LIMIT 1", dbname, table)
+	if err != nil {
+		logError("Could not check if the table already exists: ", err)
+	}
+	return result.Next()
+}
+
+//getDBName returns the database name from the runners sql.DB
+func (r runner) getDBName() (dbName string) {
+	stmt := r.db.QueryRow("SELECT DATABASE()")
+	err := stmt.Scan(&dbName)
+
+	if err != nil {
+		logError("Could not get database name: ", err)
+	}
+	return
 }
 
 //getTableNames return all tables names given path
@@ -52,15 +73,6 @@ func getTableNames(migrationsPath string) (tables []string) {
 	return
 }
 
-//tableExists check if the given table is present on the database
-func (r runner) tableExists(dbname, table string) bool {
-	result, err := r.db.Query("SELECT * FROM information_schema.tables WHERE table_schema = ? AND table_name = ? LIMIT 1", dbname, table)
-	if err != nil {
-		logError("Could not check if the table already exists: ", err)
-	}
-	return result.Next()
-}
-
 //getMigrationScript returns the migrations script given its table name and path
 func getMigrationScript(table, migrationsPath string) string {
 	script, err := ioutil.ReadFile(fmt.Sprintf("%s%s.sql", migrationsPath, table))
@@ -70,13 +82,10 @@ func getMigrationScript(table, migrationsPath string) string {
 	return string(script)
 }
 
-//getDBName returns the database name from the runners sql.DB
-func (r runner) getDBName() (dbName string) {
-	stmt := r.db.QueryRow("SELECT DATABASE()")
-	err := stmt.Scan(&dbName)
-
-	if err != nil {
-		logError("Could not get database name: ", err)
+//normalizeMigrationPath return the given string with an slash on its end, if it doenst already had one
+func normalizeMigrationPath(migrationsPath string) string {
+	if migrationsPath[len(migrationsPath)-1:] != "/" {
+		migrationsPath = migrationsPath + "/"
 	}
-	return
+	return migrationsPath
 }
