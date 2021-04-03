@@ -18,7 +18,7 @@ type runner struct {
 
 //New return an migraty runner instance
 func New(db *sql.DB, migrationsPath string) Runner {
-	return runner{db: db, migrationsPath: migrationsPath}
+	return runner{db: db, migrationsPath: migrationsPath + "/"}
 }
 
 func (r runner) Migrate() {
