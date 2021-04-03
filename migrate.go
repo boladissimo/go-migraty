@@ -40,14 +40,13 @@ func (r runner) Migrate() {
 func getTableNames(migrationsPath string) (tables []string) {
 	files, err := ioutil.ReadDir(migrationsPath)
 	if err != nil {
-		logError(err)
+		logError("Could not get table names: ", err)
 	}
 
 	for _, file := range files {
 		fileFullName := file.Name()
 		tableName := fileFullName[:len(fileFullName)-4]
 		tables = append(tables, tableName)
-		logInfo(tableName)
 	}
 
 	return
@@ -57,7 +56,7 @@ func getTableNames(migrationsPath string) (tables []string) {
 func (r runner) tableExists(dbname, table string) bool {
 	result, err := r.db.Query("SELECT * FROM information_schema.tables WHERE table_schema = ? AND table_name = ? LIMIT 1", dbname, table)
 	if err != nil {
-		logError("Could not check if the table already exists", err)
+		logError("Could not check if the table already exists: ", err)
 	}
 	return result.Next()
 }
@@ -66,7 +65,7 @@ func (r runner) tableExists(dbname, table string) bool {
 func getMigrationScript(table, migrationsPath string) string {
 	script, err := ioutil.ReadFile(fmt.Sprintf("%s%s.sql", migrationsPath, table))
 	if err != nil {
-		logError(fmt.Sprintf("Could not get script %s%s.sql", migrationsPath, table), err)
+		logError(fmt.Sprintf("Could not get script %s%s.sql: ", migrationsPath, table), err)
 	}
 	return string(script)
 }
@@ -77,7 +76,7 @@ func (r runner) getDBName() (dbName string) {
 	err := stmt.Scan(&dbName)
 
 	if err != nil {
-		logError("Could not get database name", err)
+		logError("Could not get database name: ", err)
 	}
 	return
 }
