@@ -25,6 +25,8 @@ func (r runner) Migrate() {
 	tables := getTableNames(r.migrationsPath)
 	dbName := r.getDBName()
 
+	logInfo(tables, dbName)
+
 	for _, table := range tables {
 		if !r.tableExists(dbName, table) {
 			logInfo(fmt.Sprintf("running %s migration", table))
