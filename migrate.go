@@ -23,8 +23,10 @@ func New(db *sql.DB, migrationsPath string) Runner {
 
 func (r runner) Migrate() {
 	tables := getTableNames(r.migrationsPath)
+	dbName := r.getDBName()
+
 	for _, table := range tables {
-		if !r.tableExists(table) {
+		if !r.tableExists(dbName, table) {
 			logInfo(fmt.Sprintf("running %s migration", table))
 			r.db.Exec(getMigrationScript(table, r.migrationsPath))
 		}
@@ -49,8 +51,8 @@ func getTableNames(migrationsPath string) (tables []string) {
 }
 
 //tableExists check if the given table is present on the database
-func (r runner) tableExists(table string) bool {
-	result, err := r.db.Query("show tables like ?", table)
+func (r runner) tableExists(dbname, table string) bool {
+	result, err := r.db.Query("SELECT * FROM information_schema.tables WHERE table_schema = ? AND table_name = ? LIMIT 1", dbname, table)
 	if err != nil {
 		logError(err)
 	}
@@ -64,4 +66,15 @@ func getMigrationScript(table, migrationsPath string) string {
 		logError(err)
 	}
 	return string(script)
+}
+
+//getDBName returns the database name from the runners sql.DB
+func (r runner) getDBName() (dbName string) {
+	stmt := r.db.QueryRow("SELECT DATABASE()")
+	err := stmt.Scan(&dbName)
+
+	if err != nil {
+		logError(err)
+	}
+	return
 }
